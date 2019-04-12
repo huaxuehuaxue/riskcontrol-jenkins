@@ -1,0 +1,49 @@
+plugins {
+    id 'org.springframework.boot' version '2.1.4.RELEASE'
+    id 'java'
+    id 'scala'
+    id 'maven'
+    id 'net.researchgate.release' version '2.1.2'
+}
+
+apply plugin: 'io.spring.dependency-management'
+
+group = 'com.henan.riskcontrol'
+//name = 'release-example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+
+repositories {
+    mavenCentral()
+    maven { url 'http://repo.spring.io/plugins-release' }
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+release {
+    preTagCommitMessage = '[Release]: '
+    tagCommitMessage = '[Release]: creating tag '
+    newVersionCommitMessage = '[Release]: new snapshot version '
+    tagTemplate = 'v${version}'
+}
+
+//Add following to generate JAR file with sources too:
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+artifacts {
+    archives sourcesJar
+    archives jar
+}
+
+
+
+
+
+
+
