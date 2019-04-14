@@ -1,0 +1,102 @@
+package com.henan.riskcontrol.riskcontroljenkins.utils;
+
+import com.sun.deploy.net.HttpUtils;
+
+import javax.swing.text.Document;
+import java.net.URI;
+
+public class JenkinsUtils {
+
+    private static String jenkins_url = "http://127.0.0.1/jenkins/";
+    private static String jenkins_user = "admin";
+    private static String jenkins_token = "1b356d175432ed0d34c440d68d00fe49";
+
+    /**
+     * 通过模板创建 Job
+     * @param jobName
+     * @param jobTemplate
+     * @return
+     */
+    public static boolean createJobFromTemplate(String jobName, String jobTemplate) {
+        try {
+            URI uri = new URI(jenkins_url);
+            JenkinsServer jenkins = new JenkinsServer(uri, jenkins_user, jenkins_token);
+            String template = jenkins.getJobXml(jobTemplate);
+            Document doc = DocumentHelper.parseText(template);
+            String newConfigXml = doc.asXML();
+            jenkins.createJob(jobName, newConfigXml, false);
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 删除/禁用 Job
+     * @param jobName
+     * @return
+     */
+    public static boolean deleteJob(String jobName){
+        try {
+            URI uri = new URI(jenkins_url);
+            JenkinsServer jenkins = new JenkinsServer(uri, jenkins_user, jenkins_token);
+            jenkins.deleteJob(jobName, false);
+            jenkins.disableJob(jobName, false);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 启动 Job 构建
+     * @param jobName
+     * @param params
+     * @return
+     */
+    public static boolean startJob(String jobName, String params){
+        try {
+            String buildUrl = jenkins_url + jobName + "/buildWithParameters?" + params;
+            HttpUtils.HttpGet(buildUrl);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 停止正在构建中的 Job，先清除等待队列中的 build，在停止运行中的 build
+     * @param jobName
+     * @return
+     */
+    public static boolean stopJob(String jobName){
+        try {
+            URI uri = new URI(jenkins_url);
+            JenkinsServer jenkins = new JenkinsServer(uri, jenkins_user, jenkins_token);
+            // 先 kill 掉 queue 里面的 build
+            QueueItem qi = jenkins.getJob(jobName).getQueueItem();
+            if(qi != null){
+                HttpUtils.HttpPost(jenkinsUrl + "queue/cancelItem?id=" + qi.getId());
+            }
+            // 在 kill 掉正在运行中的 build
+            List<Build> bulidsList = jenkins.getJob(jobName).getAllBuilds();
+            for(Build b:bulidsList){
+                if(b.details().isBuilding()){
+                    try{
+                        b.Stop();
+                    }catch(Exception ee){
+                        ee.printStackTrace();
+                        return false;
+                    }
+                }
+            }
+        } catch(Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+        return true;
+    }
+}
